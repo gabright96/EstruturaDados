@@ -1,0 +1,159 @@
+#include "MeuGrafo.h"
+
+#include <cstddef>
+#include <queue>
+#include <vector>
+#include <functional>
+#include <utility>
+
+#include "excecoes.h"
+//check
+MeuGrafo::MeuGrafo(const MatrizAdjacencia& matrizAdjacencia)
+    : GrafoAbstrato(matrizAdjacencia)
+{
+    if (matrizAdjacencia.size() == 0)
+    {
+        throw ExcecaoMatrizAdjacenciaVazia();
+    }
+
+    std::size_t n = matrizAdjacencia.size();
+
+    // Verifica se a matriz é quadrada
+    for (std::size_t i = 0; i < n; i++)
+    {
+        if (matrizAdjacencia[i].size() != n)
+        {
+            throw ExcecaoMatrizAdjacenciaNaoQuadrada();
+        }
+    }
+
+    // Verifica laços e custos negativos
+    for (std::size_t i = 0; i < n; i++)
+    {
+        for (std::size_t j = 0; j < n; j++)
+        {
+            double valor = matrizAdjacencia[i][j];
+
+            if (i == j && valor != GrafoAbstrato::inf)
+            {
+                throw ExcecaoVerticeComLaco();
+            }
+
+            if (valor != GrafoAbstrato::inf && valor < 0)
+            {
+                throw ExcecaoCustoNegativo();
+            }
+        }
+    }
+}
+//check
+std::size_t MeuGrafo::quantidadeVertices() const
+{
+    return _matrizAdjacencia.size();
+}
+//check
+std::size_t MeuGrafo::quantidadeArestas(std::size_t vertice) const
+{
+    if (vertice >= quantidadeVertices())
+    {
+        throw ExcecaoVerticeInvalido();
+    }
+
+    std::size_t quantidade = 0;
+    std::size_t n = quantidadeVertices();
+
+    for (std::size_t i = 0; i < n; i++)
+    {
+        if (_matrizAdjacencia[vertice][i] != GrafoAbstrato::inf)
+        {
+            quantidade++;
+        }
+    }
+
+    return quantidade;
+}
+//check
+std::size_t MeuGrafo::quantidadeArestas() const
+{
+    std::size_t total = 0;
+    std::size_t n = quantidadeVertices();
+
+    for (std::size_t i = 0; i < n; i++)
+    {
+        total += quantidadeArestas(i);
+    }
+
+    return total;
+}
+//check
+double MeuGrafo::custo(std::size_t origem, std::size_t destino) const
+{
+    if (origem >= quantidadeVertices() || destino >= quantidadeVertices())
+    {
+        throw ExcecaoVerticeInvalido();
+    }
+
+    return _matrizAdjacencia[origem][destino];
+}
+//
+std::vector<double> MeuGrafo::menoresDistancias(std::size_t origem) const
+{
+    if (origem >= quantidadeVertices())
+    {
+        throw ExcecaoVerticeInvalido();
+    }
+
+    std::size_t n = quantidadeVertices();
+
+    std::vector<double> distancia(n, GrafoAbstrato::inf);
+    std::vector<bool> visitado(n, false);
+
+    distancia[origem] = 0.0;
+
+    std::priority_queue<
+        std::pair<double, std::size_t>,
+        std::vector<std::pair<double, std::size_t> >,
+        std::greater<std::pair<double, std::size_t> >
+    > fila;
+
+    fila.push(std::pair<double, std::size_t>(0.0, origem));
+
+    while (!fila.empty())
+    {
+        double distanciaAtual = fila.top().first;
+        std::size_t verticeAtual = fila.top().second;
+
+        fila.pop();
+
+        if (visitado[verticeAtual])
+        {
+            continue;
+        }
+
+        visitado[verticeAtual] = true;
+
+        for (std::size_t i = 0; i < n; i++)
+        {
+            double peso = _matrizAdjacencia[verticeAtual][i];
+
+            if (peso == GrafoAbstrato::inf)
+            {
+                continue;
+            }
+
+            if (distanciaAtual + peso < distancia[i])
+            {
+                distancia[i] = distanciaAtual + peso;
+
+                fila.push(
+                    std::pair<double, std::size_t>(
+                        distancia[i],
+                        i
+                    )
+                );
+            }
+        }
+    }
+
+    return distancia;
+}
